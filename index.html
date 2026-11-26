@@ -74,7 +74,7 @@
     <section aria-labelledby="play-title">
       <h2 id="play-title">街區散步・可玩原型</h2>
       <div class="game-shell">
-        <div class="game-top"><span><strong>新港市</strong> / 中央街區</span><span id="district-label">市中心</span></div>
+        <div class="game-top"><span><strong>新港市</strong> / 中央街區</span><span><span id="district-label">市中心</span> · 📷 <span id="photo-count">0/5</span></span></div>
         <canvas id="city" width="960" height="540" tabindex="0" aria-label="俯視角城市地圖，可用方向鍵或 WASD 移動"></canvas>
         <div class="game-controls">
           <p id="game-message" aria-live="polite">點擊或輕觸地圖即可步行；也可用方向鍵或 WASD。走近地點後按 <kbd>E</kbd> 查看。</p>
@@ -111,9 +111,11 @@
       const places = [
         { x: 228, y: 161, name: '青葉咖啡', detail: '窗邊的座位望得到整條街。店裡傳來輕輕的音樂。' },
         { x: 624, y: 187, name: '中央公園', detail: '幾個居民在樹蔭下聊天，腳踏車沿著步道慢慢經過。' },
-        { x: 786, y: 377, name: '河岸碼頭', detail: '河風吹過欄杆，遠處可以看見跨河橋和港區吊臂。' },
-        { x: 368, y: 405, name: '轉角書店', detail: '門口的小黑板寫著今晚的讀書會主題。' }
+        { x: 700, y: 377, name: '河岸碼頭', detail: '河風吹過欄杆，遠處可以看見跨河橋和港區吊臂。' },
+        { x: 368, y: 405, name: '轉角書店', detail: '門口的小黑板寫著今晚的讀書會主題。' },
+        { x: 780, y: 136, name: '港區舊車站', detail: '老月台旁還留著褪色的時刻表，遠方傳來港口汽笛聲。' }
       ];
+      const photoCount=document.querySelector('#photo-count');
       const zones = [
         { x: 0, y: 0, w: 320, h: 270, label: '住宅區', fill: '#849a75' },
         { x: 320, y: 0, w: 360, h: 270, label: '市中心', fill: '#82916f' },
@@ -152,7 +154,7 @@
         ctx.setLineDash([13,13]);ctx.strokeStyle='#f3ead4aa';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(0,270);ctx.lineTo(960,270);ctx.moveTo(325,0);ctx.lineTo(325,540);ctx.stroke();ctx.setLineDash([]);ctx.lineWidth=1;
         [[282,263,'#d36f57'],[467,263,'#668ca4'],[663,263,'#d4a354'],[696,345,'#d67762']].forEach(([x,y,c])=>{roundedRect(x,y,22,11,4,c);ctx.fillStyle='#e7e3d0';ctx.fillRect(x+4,y+2,5,3);ctx.fillRect(x+13,y+2,5,3);});
         // Points of interest.
-        places.forEach(p=>{ctx.fillStyle='#f5bd73';ctx.beginPath();ctx.arc(p.x,p.y,13,0,Math.PI*2);ctx.fill();ctx.fillStyle='#523f2d';ctx.font='bold 15px system-ui';ctx.textAlign='center';ctx.fillText('i',p.x,p.y+5);});
+        places.forEach(p=>{ctx.fillStyle=p.photographed?'#8de0bd':'#f5bd73';ctx.beginPath();ctx.arc(p.x,p.y,13,0,Math.PI*2);ctx.fill();ctx.fillStyle='#523f2d';ctx.font='bold 15px system-ui';ctx.textAlign='center';ctx.fillText(p.photographed?'✓':'i',p.x,p.y+5);});
         if(!sketchbook.found){roundedRect(sketchbook.x-7,sketchbook.y-5,14,10,2,'#e9a65e');ctx.strokeStyle='#fff0c9';ctx.beginPath();ctx.moveTo(sketchbook.x,sketchbook.y-4);ctx.lineTo(sketchbook.x,sketchbook.y+4);ctx.stroke();}
         // Neighbor in the park; the speech bubble marks an available conversation.
         ctx.fillStyle='#283b37';ctx.beginPath();ctx.ellipse(neighbor.x,neighbor.y+9,10,4,0,0,Math.PI*2);ctx.fill();
@@ -165,7 +167,7 @@
         ctx.fillStyle='#8de0bd';ctx.beginPath();ctx.arc(player.x+player.facing*3,player.y-3,6,0,Math.PI*2);ctx.fill();
         ctx.fillStyle='#eff7f1';ctx.beginPath();ctx.arc(player.x+player.facing*5,player.y-4,1.4,0,Math.PI*2);ctx.fill();
       }
-      function nearestPlace(){return places.map(p=>({...p,d:Math.hypot(p.x-player.x,p.y-player.y)})).sort((a,b)=>a.d-b.d)[0];}
+      function nearestPlace(){return places.map(place=>({place,d:Math.hypot(place.x-player.x,place.y-player.y)})).sort((a,b)=>a.d-b.d)[0];}
       function interact(){
         const npcDistance=Math.hypot(neighbor.x-player.x,neighbor.y-player.y);
         const bookDistance=Math.hypot(sketchbook.x-player.x,sketchbook.y-player.y);
@@ -174,7 +176,7 @@
         if(!sketchbook.found&&!sketchbook.resolved&&bookDistance<28){sketchbook.found=true;message.textContent='你在長椅旁找到一本素描本。回去找小安，或交給公園服務台。';return;}
         if(sketchbook.found&&!sketchbook.resolved&&npcDistance<46){message.textContent='你找到小安的素描本了。想怎麼處理？';choices.hidden=false;return;}
         if(sketchbook.resolved&&npcDistance<46){message.textContent=trust>0?'小安：謝謝你親自把素描本還回來。傍晚的河岸很漂亮，有空可以去散步。':'小安：我從服務台領回素描本了，謝謝你幫忙找它。';return;}
-        const p=nearestPlace();if(p.d<46){message.textContent=`${p.name}：${p.detail}`;}else if(npcDistance<46){message.textContent='小安正在找她的素描本。';}else{message.textContent='附近沒有特別的地點。沿著街道走走看看吧。';}
+        const nearest=nearestPlace();const p=nearest.place;if(nearest.d<46){if(!p.photographed){p.photographed=true;const count=places.filter(place=>place.photographed).length;photoCount.textContent=`${count}/${places.length}`;message.textContent=`${p.name}：${p.detail} 你拍下照片（${count}/${places.length}）。`;}else{message.textContent=`${p.name}：${p.detail} 你已經拍過這裡。`;}}else if(npcDistance<46){message.textContent='小安正在找她的素描本。';}else{message.textContent='附近沒有特別的地點。沿著街道走走看看吧。';}
       }
       function updateDistrict(){const z=zones.find(z=>player.x>=z.x&&player.x<z.x+z.w&&player.y>=z.y&&player.y<z.y+z.h);districtLabel.textContent=z?.label||'街道';}
       function canMove(x,y){
