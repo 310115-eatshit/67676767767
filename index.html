@@ -74,7 +74,7 @@
     <section aria-labelledby="play-title">
       <h2 id="play-title">街區散步・可玩原型</h2>
       <div class="game-shell">
-        <div class="game-top"><span><strong>新港市</strong> / 中央街區</span><span><span id="district-label">市中心</span> · 📷 <span id="photo-count">0/5</span></span></div>
+        <div class="game-top"><span><strong>新港市</strong> / 中央街區</span><span><span id="district-label">市中心</span> · 📷 <span id="photo-count">0/5</span> · 警方關注 <span id="police-count">0</span></span></div>
         <canvas id="city" width="960" height="540" tabindex="0" aria-label="俯視角城市地圖，可用方向鍵或 WASD 移動"></canvas>
         <div class="game-controls">
           <p id="game-message" aria-live="polite">點擊或輕觸地圖即可步行；也可用方向鍵或 WASD。走近地點後按 <kbd>E</kbd> 查看。</p>
@@ -87,6 +87,10 @@
         <div id="quest-choices" class="choice-row" hidden>
           <button type="button" data-choice="return">交還給小安</button>
           <button type="button" data-choice="desk">放到服務台失物招領處</button>
+        </div>
+        <div id="incident-choices" class="choice-row" hidden>
+          <button type="button" data-incident-choice="join">跟上搶包者</button>
+          <button type="button" data-incident-choice="help">陪受害者去服務站</button>
         </div>
       </div>
     </section>
@@ -107,7 +111,9 @@
       let walkTarget = null;
       const neighbor = { x: 578, y: 160, name: '小安' };
       const sketchbook = { x: 630, y: 145, found: false, resolved: false };
+      const streetIncident = { x: 660, y: 305, choice: null };
       let trust = 0;
+      let policeAttention = 0;
       const places = [
         { x: 228, y: 161, name: '青葉咖啡', detail: '窗邊的座位望得到整條街。店裡傳來輕輕的音樂。' },
         { x: 624, y: 187, name: '中央公園', detail: '幾個居民在樹蔭下聊天，腳踏車沿著步道慢慢經過。' },
@@ -122,10 +128,13 @@
       places.forEach(place=>{place.photographed=Array.isArray(savedProgress.photos)&&savedProgress.photos.includes(place.name);});
       sketchbook.found=savedProgress.sketchbookFound===true;
       sketchbook.resolved=savedProgress.sketchbookResolved===true;
+      streetIncident.choice=savedProgress.streetIncidentChoice||null;
       trust=Number.isFinite(savedProgress.trust)?savedProgress.trust:0;
+      policeAttention=Number.isFinite(savedProgress.policeAttention)?savedProgress.policeAttention:0;
       photoCount.textContent=`${places.filter(place=>place.photographed).length}/${places.length}`;
+      document.querySelector('#police-count').textContent=String(policeAttention);
       function saveProgress(){
-        try{localStorage.setItem(saveKey,JSON.stringify({photos:places.filter(place=>place.photographed).map(place=>place.name),sketchbookFound:sketchbook.found,sketchbookResolved:sketchbook.resolved,trust}));}catch{}
+        try{localStorage.setItem(saveKey,JSON.stringify({photos:places.filter(place=>place.photographed).map(place=>place.name),sketchbookFound:sketchbook.found,sketchbookResolved:sketchbook.resolved,trust,streetIncidentChoice:streetIncident.choice,policeAttention}));}catch{}
       }
       const zones = [
         { x: 0, y: 0, w: 320, h: 270, label: '住宅區', fill: '#849a75' },
@@ -163,10 +172,16 @@
         buildings.forEach(([x,y,w,h,c],i)=>{roundedRect(x+4,y+5,w,h,7,'#46574a55');roundedRect(x,y,w,h,7,c);ctx.fillStyle='#e6d8b8aa';ctx.fillRect(x+9,y+9,w-18,5);ctx.fillStyle='#7c8b7566';for(let wx=x+12;wx<x+w-8;wx+=20)for(let wy=y+24;wy<y+h-8;wy+=20)ctx.fillRect(wx,wy,7,7);if(i%3===0){ctx.fillStyle='#727a65';ctx.fillRect(x+w/2-6,y+h/2-5,12,10);}});
         // Road markings and a few parked cars.
         ctx.setLineDash([13,13]);ctx.strokeStyle='#f3ead4aa';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(0,270);ctx.lineTo(960,270);ctx.moveTo(325,0);ctx.lineTo(325,540);ctx.stroke();ctx.setLineDash([]);ctx.lineWidth=1;
+        // Street names make the main walking routes easier to read.
+        ctx.font='bold 10px system-ui';ctx.textAlign='center';ctx.fillStyle='#596357';
+        ctx.fillText('中央大道',112,265);ctx.fillText('公園路',431,265);ctx.fillText('港灣路',779,265);
+        ctx.save();ctx.translate(331,91);ctx.rotate(-Math.PI/2);ctx.fillText('新港路',0,0);ctx.restore();
+        ctx.fillStyle='#6a7464';ctx.beginPath();ctx.arc(325,270,6,0,Math.PI*2);ctx.fill();ctx.beginPath();ctx.arc(686,270,6,0,Math.PI*2);ctx.fill();
         [[282,263,'#d36f57'],[467,263,'#668ca4'],[663,263,'#d4a354'],[696,345,'#d67762']].forEach(([x,y,c])=>{roundedRect(x,y,22,11,4,c);ctx.fillStyle='#e7e3d0';ctx.fillRect(x+4,y+2,5,3);ctx.fillRect(x+13,y+2,5,3);});
         // Points of interest.
         places.forEach(p=>{ctx.fillStyle=p.photographed?'#8de0bd':'#f5bd73';ctx.beginPath();ctx.arc(p.x,p.y,13,0,Math.PI*2);ctx.fill();ctx.fillStyle='#523f2d';ctx.font='bold 15px system-ui';ctx.textAlign='center';ctx.fillText(p.photographed?'✓':'i',p.x,p.y+5);});
         if(!sketchbook.found){roundedRect(sketchbook.x-7,sketchbook.y-5,14,10,2,'#e9a65e');ctx.strokeStyle='#fff0c9';ctx.beginPath();ctx.moveTo(sketchbook.x,sketchbook.y-4);ctx.lineTo(sketchbook.x,sketchbook.y+4);ctx.stroke();}
+        ctx.fillStyle=streetIncident.choice?'#8de0bd':'#e88c72';ctx.beginPath();ctx.arc(streetIncident.x,streetIncident.y,13,0,Math.PI*2);ctx.fill();ctx.fillStyle='#4b342d';ctx.font='bold 15px system-ui';ctx.textAlign='center';ctx.fillText(streetIncident.choice?'✓':'!',streetIncident.x,streetIncident.y+5);
         // Neighbor in the park; the speech bubble marks an available conversation.
         ctx.fillStyle='#283b37';ctx.beginPath();ctx.ellipse(neighbor.x,neighbor.y+9,10,4,0,0,Math.PI*2);ctx.fill();
         ctx.fillStyle='#db8f69';ctx.beginPath();ctx.arc(neighbor.x,neighbor.y,9,0,Math.PI*2);ctx.fill();
@@ -182,7 +197,11 @@
       function interact(){
         const npcDistance=Math.hypot(neighbor.x-player.x,neighbor.y-player.y);
         const bookDistance=Math.hypot(sketchbook.x-player.x,sketchbook.y-player.y);
+        const incidentDistance=Math.hypot(streetIncident.x-player.x,streetIncident.y-player.y);
         const choices=document.querySelector('#quest-choices');
+        const incidentChoices=document.querySelector('#incident-choices');
+        if(incidentDistance<46&&!streetIncident.choice){message.textContent='你看到有人搶走一位行人的包，受害者在附近求助。你要如何回應？';incidentChoices.hidden=false;return;}
+        if(incidentDistance<46&&streetIncident.choice){message.textContent=streetIncident.choice==='join'?'警方仍在調查這起搶案，開始留意你的行蹤。':'受害者已到服務站報案，並向你道謝。';return;}
         if(!sketchbook.found&&!sketchbook.resolved&&npcDistance<46){message.textContent=`${neighbor.name}：我把素描本落在公園長椅附近，可以幫我找找嗎？`;return;}
         if(!sketchbook.found&&!sketchbook.resolved&&bookDistance<28){sketchbook.found=true;saveProgress();message.textContent='你在長椅旁找到一本素描本。回去找小安，或交給公園服務台。';return;}
         if(sketchbook.found&&!sketchbook.resolved&&npcDistance<46){message.textContent='你找到小安的素描本了。想怎麼處理？';choices.hidden=false;return;}
@@ -206,6 +225,12 @@
         if(button.dataset.choice==='return'){trust+=1;message.textContent=`小安接過素描本，謝謝你幫忙。鄰居信任 +1（${trust}）。`;}
         else{message.textContent='你把素描本放進公園服務台的失物招領箱。小安晚點就能去領取。';}
         saveProgress();
+      }));
+      document.querySelectorAll('[data-incident-choice]').forEach(button=>button.addEventListener('click',()=>{
+        document.querySelector('#incident-choices').hidden=true;streetIncident.choice=button.dataset.incidentChoice;
+        if(streetIncident.choice==='join'){policeAttention+=1;trust=Math.max(0,trust-1);message.textContent=`你選擇跟上搶包者。警方開始留意你，警方關注 +1（${policeAttention}）；居民信任 ${trust}。`;}
+        else{trust+=1;message.textContent=`你陪受害者到服務站求助。居民信任 +1（${trust}）。`;}
+        document.querySelector('#police-count').textContent=String(policeAttention);saveProgress();
       }));
       document.querySelectorAll('[data-dir]').forEach(button=>{const dir=button.dataset.dir;const key={up:'arrowup',down:'arrowdown',left:'arrowleft',right:'arrowright'}[dir];button.addEventListener('pointerdown',e=>{e.preventDefault();keys.add(key);});['pointerup','pointercancel','pointerleave'].forEach(name=>button.addEventListener(name,()=>keys.delete(key)));});
       let last=performance.now();
