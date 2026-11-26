@@ -180,7 +180,7 @@
       function canMove(x,y){
         const radius=9;
         if(x<radius+3||x>960-radius-3||y<radius+3||y>540-radius-3)return false;
-        if(x>727&&y>288)return false;
+        if(x+radius>714&&y+radius>288)return false;
         return !buildings.some(([bx,by,bw,bh])=>{const cx=Math.max(bx,Math.min(x,bx+bw));const cy=Math.max(by,Math.min(y,by+bh));return Math.hypot(x-cx,y-cy)<radius;});
       }
       window.addEventListener('keydown',e=>{const k=e.key.toLowerCase();if(['arrowup','arrowdown','arrowleft','arrowright',' '].includes(k))e.preventDefault();if(k==='e'){interact();return;}keys.add(k);},{passive:false});
