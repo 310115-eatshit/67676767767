@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#101819">
+  <meta name="description" content="一款以自由探索、城市日常與玩家選擇為核心的寫實開放世界遊戲構想。">
+  <title>自由城市｜開放世界探索遊戲</title>
+  <style>
+    :root { color-scheme: dark; --bg:#101819; --panel:#172324; --ink:#eff7f1; --muted:#aec2ba; --mint:#8de0bd; --orange:#ffb66b; }
+    * { box-sizing:border-box; }
+    body { margin:0; font-family: system-ui,-apple-system,"Segoe UI",sans-serif; background:radial-gradient(ellipse at 78% 12%,#24443a 0,transparent 35%),linear-gradient(145deg,#101819,#142326 65%,#1b302c); color:var(--ink); min-height:100vh; }
+    .wrap { max-width:1080px; padding:32px 24px 64px; margin:auto; }
+    header { display:flex; justify-content:space-between; align-items:center; gap:18px; padding:8px 0 56px; }
+    .brand { letter-spacing:.18em; font-size:.78rem; color:var(--mint); font-weight:700; }
+    .status { font-size:.8rem; color:var(--muted); border:1px solid #ffffff2a; padding:8px 12px; border-radius:999px; }
+    .hero { max-width:780px; padding:20px 0 64px; }
+    .eyebrow { color:var(--orange); text-transform:uppercase; letter-spacing:.2em; font-size:.77rem; font-weight:700; }
+    h1 { font-size:clamp(3.2rem,10vw,7.4rem); letter-spacing:-.065em; line-height:.92; margin:20px 0 24px; }
+    h1 span { color:var(--mint); }
+    .lead { color:#d2e0da; font-size:clamp(1.05rem,2.3vw,1.3rem); line-height:1.8; max-width:660px; }
+    .tags { display:flex; flex-wrap:wrap; gap:10px; margin-top:26px; }
+    .tag { border:1px solid #ffffff25; border-radius:999px; padding:8px 13px; color:var(--muted); font-size:.88rem; }
+    section { margin-top:26px; }
+    h2 { font-size:1.5rem; margin:0 0 16px; }
+    .districts { display:grid; grid-template-columns:repeat(5,1fr); gap:12px; }
+    .card { background:linear-gradient(155deg,#203334dd,#172526dd); border:1px solid #ffffff16; padding:19px 16px; min-height:140px; border-radius:16px; }
+    .card .icon { font-size:1.5rem; }
+    .card h3 { margin:12px 0 6px; font-size:1rem; }
+    .card p { margin:0; color:var(--muted); font-size:.86rem; line-height:1.55; }
+    .columns { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+    .panel { border:1px solid #ffffff16; background:#172324c9; padding:22px; border-radius:18px; }
+    .panel p { margin:0; color:var(--muted); line-height:1.75; }
+    footer { border-top:1px solid #ffffff1b; margin-top:48px; padding-top:18px; color:#91a79e; font-size:.84rem; }
+    @media(max-width:760px) { .districts { grid-template-columns:repeat(2,1fr); } .columns { grid-template-columns:1fr; } header { padding-bottom:36px; } }
+    @media(max-width:390px) { .districts { grid-template-columns:1fr; } }
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <header><div class="brand">CITY / OPEN WORLD</div><div class="status">遊戲構想・前期規劃</div></header>
+    <section class="hero" aria-labelledby="title">
+      <div class="eyebrow">Your city, your pace</div>
+      <h1 id="title">自由<span>城市</span></h1>
+      <p class="lead">一座有街區、有日常，也藏著各種故事的現代城市。想去哪裡、想遇見誰、今天要做什麼——由玩家自己決定。</p>
+      <div class="tags"><span class="tag">開放世界探索</span><span class="tag">寫實城市氛圍</span><span class="tag">自由選擇</span><span class="tag">行動帶來後果</span></div>
+    </section>
+    <section aria-labelledby="map-title"><h2 id="map-title">城市，從哪裡開始？</h2>
+      <div class="districts">
+        <article class="card"><div class="icon">🌆</div><h3>市中心</h3><p>繁忙街道、店家與城市事件。</p></article>
+        <article class="card"><div class="icon">🏘️</div><h3>住宅區</h3><p>居民生活與熟悉的街坊日常。</p></article>
+        <article class="card"><div class="icon">🏭</div><h3>工業區</h3><p>寬闊場景，留待探索與活動發展。</p></article>
+        <article class="card"><div class="icon">🌊</div><h3>海邊</h3><p>沿岸散步、放鬆與發現新角落。</p></article>
+        <article class="card"><div class="icon">🌳</div><h3>郊區</h3><p>離開市區，看看更開闊的地方。</p></article>
+      </div>
+    </section>
+    <section class="columns" aria-label="遊戲方向">
+      <article class="panel"><h2>自由探索</h2><p>步行或開車移動、逛店、認識角色、發現地點，或參與支線事件。玩家不受單一主線限制，可以按照自己的興趣安排旅程。</p></article>
+      <article class="panel"><h2>每個選擇都有回聲</h2><p>角色互動與虛構劇情會帶來遊戲內的變化，例如居民信任、警方關注、故事發展或之後出現的機會。重點放在選擇及其後果。</p></article>
+    </section>
+    <footer>目前為早期遊戲構想。地圖、玩法細節與技術方向仍在規劃中。</footer>
+  </main>
+</body>
+</html>
