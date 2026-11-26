@@ -31,8 +31,21 @@
     .columns { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
     .panel { border:1px solid #ffffff16; background:#172324c9; padding:22px; border-radius:18px; }
     .panel p { margin:0; color:var(--muted); line-height:1.75; }
+    .game-shell { overflow:hidden; border:1px solid #ffffff20; border-radius:20px; background:#142020; box-shadow:0 24px 80px #0005; }
+    .game-top { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:14px 18px; color:var(--muted); font-size:.9rem; }
+    .game-top strong { color:var(--mint); }
+    canvas { display:block; width:100%; height:auto; aspect-ratio:16/9; background:#607c68; touch-action:none; }
+    canvas:focus-visible { outline:3px solid var(--orange); outline-offset:-4px; }
+    .game-controls { display:flex; justify-content:space-between; align-items:center; gap:14px; padding:13px 16px; }
+    .game-controls p { margin:0; color:var(--muted); font-size:.88rem; line-height:1.6; }
+    .game-controls kbd { background:#263637; border:1px solid #ffffff26; border-radius:5px; padding:2px 6px; color:var(--ink); }
+    .game-controls button { border:1px solid #a3efcd65; background:#8de0bd18; color:var(--mint); border-radius:10px; padding:10px 14px; font:inherit; cursor:pointer; white-space:nowrap; }
+    .game-controls button:hover { background:#8de0bd30; }
+    .touch-pad { display:none; grid-template-columns:repeat(3,44px); gap:5px; }
+    .touch-pad button { min-height:40px; padding:5px; touch-action:none; }
     footer { border-top:1px solid #ffffff1b; margin-top:48px; padding-top:18px; color:#91a79e; font-size:.84rem; }
     @media(max-width:760px) { .districts { grid-template-columns:repeat(2,1fr); } .columns { grid-template-columns:1fr; } header { padding-bottom:36px; } }
+    @media(max-width:600px) { .game-controls { align-items:flex-start; flex-direction:column; } .touch-pad { display:grid; } }
     @media(max-width:390px) { .districts { grid-template-columns:1fr; } }
   </style>
 </head>
@@ -54,11 +67,97 @@
         <article class="card"><div class="icon">🌳</div><h3>郊區</h3><p>離開市區，看看更開闊的地方。</p></article>
       </div>
     </section>
+    <section aria-labelledby="play-title">
+      <h2 id="play-title">街區散步・可玩原型</h2>
+      <div class="game-shell">
+        <div class="game-top"><span><strong>新港市</strong> / 中央街區</span><span id="district-label">市中心</span></div>
+        <canvas id="city" width="960" height="540" tabindex="0" aria-label="俯視角城市地圖，可用方向鍵或 WASD 移動"></canvas>
+        <div class="game-controls">
+          <p id="game-message" aria-live="polite">走近地圖上的地點，按 <kbd>E</kbd> 查看。用方向鍵或 WASD 移動。</p>
+          <div class="touch-pad" aria-label="觸控移動">
+            <span></span><button data-dir="up" aria-label="向上">↑</button><span></span>
+            <button data-dir="left" aria-label="向左">←</button><button data-dir="down" aria-label="向下">↓</button><button data-dir="right" aria-label="向右">→</button>
+          </div>
+          <button id="interact" type="button">E　查看附近</button>
+        </div>
+      </div>
+    </section>
     <section class="columns" aria-label="遊戲方向">
       <article class="panel"><h2>自由探索</h2><p>步行或開車移動、逛店、認識角色、發現地點，或參與支線事件。玩家不受單一主線限制，可以按照自己的興趣安排旅程。</p></article>
       <article class="panel"><h2>每個選擇都有回聲</h2><p>角色互動與虛構劇情會帶來遊戲內的變化，例如居民信任、警方關注、故事發展或之後出現的機會。重點放在選擇及其後果。</p></article>
     </section>
-    <footer>目前為早期遊戲構想。地圖、玩法細節與技術方向仍在規劃中。</footer>
+    <footer>互動原型 01：街區散步。城市、地點與角色皆為虛構，遊戲內容仍在開發中。</footer>
   </main>
+  <script>
+    (() => {
+      const canvas = document.querySelector('#city');
+      const ctx = canvas.getContext('2d');
+      const message = document.querySelector('#game-message');
+      const districtLabel = document.querySelector('#district-label');
+      const keys = new Set();
+      const player = { x: 454, y: 278, speed: 190, facing: 1 };
+      const places = [
+        { x: 228, y: 161, name: '青葉咖啡', detail: '窗邊的座位望得到整條街。店裡傳來輕輕的音樂。' },
+        { x: 624, y: 187, name: '中央公園', detail: '幾個居民在樹蔭下聊天，腳踏車沿著步道慢慢經過。' },
+        { x: 786, y: 377, name: '河岸碼頭', detail: '河風吹過欄杆，遠處可以看見跨河橋和港區吊臂。' },
+        { x: 368, y: 405, name: '轉角書店', detail: '門口的小黑板寫著今晚的讀書會主題。' }
+      ];
+      const zones = [
+        { x: 0, y: 0, w: 320, h: 270, label: '住宅區', fill: '#849a75' },
+        { x: 320, y: 0, w: 360, h: 270, label: '市中心', fill: '#82916f' },
+        { x: 680, y: 0, w: 280, h: 270, label: '工業區', fill: '#8b9274' },
+        { x: 0, y: 270, w: 320, h: 270, label: '郊區', fill: '#79936f' },
+        { x: 320, y: 270, w: 360, h: 270, label: '市中心', fill: '#819775' },
+        { x: 680, y: 270, w: 280, h: 270, label: '海邊', fill: '#78927c' }
+      ];
+      const buildings = [
+        [42,42,90,66,'#bdad8b'],[170,36,112,80,'#c3b99a'],[43,150,82,76,'#b3a586'],[157,169,120,68,'#cbbd9a'],
+        [365,42,86,78,'#b1a78e'],[488,38,142,87,'#c8bca0'],[361,158,112,76,'#bcb293'],[517,160,120,66,'#c6b48f'],
+        [716,38,86,80,'#9f9d89'],[835,46,82,72,'#a7a28b'],[725,164,108,66,'#ada78e'],[856,151,70,79,'#989a87'],
+        [39,323,109,76,'#b9ad91'],[184,318,102,96,'#b8b193'],[62,436,94,66,'#a9a889'],[197,441,99,65,'#c2b897'],
+        [357,323,100,65,'#c7b394'],[512,316,122,88,'#b8aa8c'],[365,432,94,74,'#b8b090'],[522,438,109,62,'#c7b598']
+      ];
+      function roundedRect(x,y,w,h,r,color) { ctx.fillStyle=color; ctx.beginPath(); ctx.roundRect(x,y,w,h,r); ctx.fill(); }
+      function draw() {
+        ctx.clearRect(0,0,960,540);
+        zones.forEach(z => { ctx.fillStyle=z.fill; ctx.fillRect(z.x,z.y,z.w,z.h); });
+        // Streets divide the blocks and connect the districts.
+        ctx.fillStyle='#c8c4ad'; ctx.fillRect(0,252,960,36); ctx.fillRect(308,0,34,540); ctx.fillRect(669,0,34,540);
+        ctx.fillStyle='#eee9d6'; ctx.fillRect(0,268,960,3); ctx.fillRect(323,0,3,540); ctx.fillRect(684,0,3,540);
+        // River and waterfront promenade.
+        ctx.fillStyle='#477f83'; ctx.fillRect(714,288,246,252);
+        ctx.fillStyle='#69a1a0'; ctx.fillRect(714,288,13,252);
+        ctx.fillStyle='#d7c7a6'; ctx.fillRect(690,288,24,252);
+        for(let y=300;y<535;y+=22){ctx.strokeStyle='#9ac2b4aa';ctx.beginPath();ctx.moveTo(741,y);ctx.quadraticCurveTo(835,y+8,950,y);ctx.stroke();}
+        // Park, paths and trees.
+        roundedRect(554,91,91,122,18,'#63855f');
+        ctx.strokeStyle='#d0c69e';ctx.lineWidth=8;ctx.beginPath();ctx.moveTo(566,151);ctx.lineTo(633,151);ctx.moveTo(599,103);ctx.lineTo(599,201);ctx.stroke();ctx.lineWidth=1;
+        [[571,116],[628,116],[573,190],[629,190],[600,132],[600,174]].forEach(([x,y])=>{ctx.fillStyle='#385f48';ctx.beginPath();ctx.arc(x,y,8,0,Math.PI*2);ctx.fill();ctx.fillStyle='#719365';ctx.beginPath();ctx.arc(x-2,y-3,5,0,Math.PI*2);ctx.fill();});
+        // Building footprints with small shaded roofs.
+        buildings.forEach(([x,y,w,h,c],i)=>{roundedRect(x+4,y+5,w,h,7,'#46574a55');roundedRect(x,y,w,h,7,c);ctx.fillStyle='#e6d8b8aa';ctx.fillRect(x+9,y+9,w-18,5);ctx.fillStyle='#7c8b7566';for(let wx=x+12;wx<x+w-8;wx+=20)for(let wy=y+24;wy<y+h-8;wy+=20)ctx.fillRect(wx,wy,7,7);if(i%3===0){ctx.fillStyle='#727a65';ctx.fillRect(x+w/2-6,y+h/2-5,12,10);}});
+        // Road markings and a few parked cars.
+        ctx.setLineDash([13,13]);ctx.strokeStyle='#f3ead4aa';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(0,270);ctx.lineTo(960,270);ctx.moveTo(325,0);ctx.lineTo(325,540);ctx.stroke();ctx.setLineDash([]);ctx.lineWidth=1;
+        [[282,263,'#d36f57'],[467,263,'#668ca4'],[663,263,'#d4a354'],[696,345,'#d67762']].forEach(([x,y,c])=>{roundedRect(x,y,22,11,4,c);ctx.fillStyle='#e7e3d0';ctx.fillRect(x+4,y+2,5,3);ctx.fillRect(x+13,y+2,5,3);});
+        // Points of interest.
+        places.forEach(p=>{ctx.fillStyle='#f5bd73';ctx.beginPath();ctx.arc(p.x,p.y,13,0,Math.PI*2);ctx.fill();ctx.fillStyle='#523f2d';ctx.font='bold 15px system-ui';ctx.textAlign='center';ctx.fillText('i',p.x,p.y+5);});
+        // Player shadow, body and facing direction.
+        ctx.fillStyle='#172a25aa';ctx.beginPath();ctx.ellipse(player.x,player.y+10,11,5,0,0,Math.PI*2);ctx.fill();
+        ctx.fillStyle='#23483c';ctx.beginPath();ctx.arc(player.x,player.y,10,0,Math.PI*2);ctx.fill();
+        ctx.fillStyle='#8de0bd';ctx.beginPath();ctx.arc(player.x+player.facing*3,player.y-3,6,0,Math.PI*2);ctx.fill();
+        ctx.fillStyle='#eff7f1';ctx.beginPath();ctx.arc(player.x+player.facing*5,player.y-4,1.4,0,Math.PI*2);ctx.fill();
+      }
+      function nearestPlace(){return places.map(p=>({...p,d:Math.hypot(p.x-player.x,p.y-player.y)})).sort((a,b)=>a.d-b.d)[0];}
+      function interact(){const p=nearestPlace();if(p.d<46){message.textContent=`${p.name}：${p.detail}`;}else{message.textContent='附近沒有特別的地點。沿著街道走走看看吧。';}}
+      function updateDistrict(){const z=zones.find(z=>player.x>=z.x&&player.x<z.x+z.w&&player.y>=z.y&&player.y<z.y+z.h);districtLabel.textContent=z?.label||'街道';}
+      window.addEventListener('keydown',e=>{const k=e.key.toLowerCase();if(['arrowup','arrowdown','arrowleft','arrowright',' '].includes(k))e.preventDefault();if(k==='e'){interact();return;}keys.add(k);},{passive:false});
+      window.addEventListener('keyup',e=>keys.delete(e.key.toLowerCase()));
+      window.addEventListener('blur',()=>keys.clear());
+      document.querySelector('#interact').addEventListener('click',interact);
+      document.querySelectorAll('[data-dir]').forEach(button=>{const dir=button.dataset.dir;const key={up:'arrowup',down:'arrowdown',left:'arrowleft',right:'arrowright'}[dir];button.addEventListener('pointerdown',e=>{e.preventDefault();keys.add(key);});['pointerup','pointercancel','pointerleave'].forEach(name=>button.addEventListener(name,()=>keys.delete(key)));});
+      let last=performance.now();
+      function frame(now){const dt=Math.min((now-last)/1000,.04);last=now;let dx=0,dy=0;if(keys.has('arrowleft')||keys.has('a'))dx--;if(keys.has('arrowright')||keys.has('d'))dx++;if(keys.has('arrowup')||keys.has('w'))dy--;if(keys.has('arrowdown')||keys.has('s'))dy++;if(dx||dy){const len=Math.hypot(dx,dy);player.x=Math.max(13,Math.min(947,player.x+dx/len*player.speed*dt));player.y=Math.max(13,Math.min(527,player.y+dy/len*player.speed*dt));if(dx)player.facing=Math.sign(dx);updateDistrict();}draw();requestAnimationFrame(frame);}
+      updateDistrict();requestAnimationFrame(frame);
+    })();
+  </script>
 </body>
 </html>

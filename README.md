@@ -1,15 +1,22 @@
 # 自由城市
 
-寫實風格的開放世界城市探索遊戲構想。玩家可以自由探索市中心、住宅區、工業區、海邊與郊區，依自己的興趣移動、逛店、認識角色或參與支線事件。
-
-目前處於前期規劃階段，靈感方向是廣闊且可自由探索的城市體驗，所有城市、角色與故事將另行創作。虛構犯罪題材著重遊戲內的選擇與後果。
+寫實風格的開放世界城市探索遊戲構想與網頁互動原型。玩家可以在虛構的新港市自由探索街區、查看地點，並逐步體驗城市生活。
 
 ## 專案內容
 
-- `knowledge/plan.md`：願景、狀態與路線圖
-- `index.html`：GitHub Pages 靜態介紹頁
-- `.github/workflows/pages.yml`：GitHub Actions 自動部署流程
+- `index.html`：中文介紹頁與可操作的俯視角街區散步原型
+- `knowledge/plan.md`：願景、目前狀態與路線圖
+- `knowledge/experience.md`：開發經驗與可重用範圍
+- `.github/workflows/pages.yml`：GitHub Actions 自動部署
+
+## 遊玩方式
+
+- 用方向鍵或 WASD 移動角色。
+- 走到地圖上的圓形資訊標誌附近，按 `E` 或按「查看附近」閱讀地點描述。
+- 手機或平板可使用畫面上的方向按鈕。
 
 ## 發布
 
-將 `main` 分支推送至 GitHub 後，Actions 會建置並發布靜態頁面至 GitHub Pages。首次建立儲存庫後，請在儲存庫設定的 Pages 區段確認部署來源為 GitHub Actions。
+將更新推送到 `main` 分支後，GitHub Actions 會把網站發布到 GitHub Pages。若儲存庫首次啟用 Pages，請在 **Settings → Pages → Build and deployment** 將來源設為 **GitHub Actions**。
+
+目前是早期原型，地圖、人物和活動仍會持續擴充。
