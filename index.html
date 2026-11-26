@@ -41,6 +41,10 @@
     .game-controls kbd { background:#263637; border:1px solid #ffffff26; border-radius:5px; padding:2px 6px; color:var(--ink); }
     .game-controls button { border:1px solid #a3efcd65; background:#8de0bd18; color:var(--mint); border-radius:10px; padding:10px 14px; font:inherit; cursor:pointer; white-space:nowrap; }
     .game-controls button:hover { background:#8de0bd30; }
+    .choice-row { display:flex; flex-wrap:wrap; gap:8px; padding:0 16px 14px; }
+    .choice-row[hidden] { display:none; }
+    .choice-row button { border:1px solid #ffffff25; background:#203032; color:var(--ink); border-radius:9px; padding:9px 12px; font:inherit; cursor:pointer; }
+    .choice-row button:hover { border-color:var(--mint); }
     .touch-pad { display:none; grid-template-columns:repeat(3,44px); gap:5px; }
     .touch-pad button { min-height:40px; padding:5px; touch-action:none; }
     footer { border-top:1px solid #ffffff1b; margin-top:48px; padding-top:18px; color:#91a79e; font-size:.84rem; }
@@ -51,7 +55,7 @@
 </head>
 <body>
   <main class="wrap">
-    <header><div class="brand">CITY / OPEN WORLD</div><div class="status">遊戲構想・前期規劃</div></header>
+    <header><div class="brand">CITY / OPEN WORLD</div><div class="status">早期可玩原型・持續開發</div></header>
     <section class="hero" aria-labelledby="title">
       <div class="eyebrow">Your city, your pace</div>
       <h1 id="title">自由<span>城市</span></h1>
@@ -73,12 +77,16 @@
         <div class="game-top"><span><strong>新港市</strong> / 中央街區</span><span id="district-label">市中心</span></div>
         <canvas id="city" width="960" height="540" tabindex="0" aria-label="俯視角城市地圖，可用方向鍵或 WASD 移動"></canvas>
         <div class="game-controls">
-          <p id="game-message" aria-live="polite">走近地圖上的地點，按 <kbd>E</kbd> 查看。用方向鍵或 WASD 移動。</p>
+          <p id="game-message" aria-live="polite">點擊或輕觸地圖即可步行；也可用方向鍵或 WASD。走近地點後按 <kbd>E</kbd> 查看。</p>
           <div class="touch-pad" aria-label="觸控移動">
             <span></span><button data-dir="up" aria-label="向上">↑</button><span></span>
             <button data-dir="left" aria-label="向左">←</button><button data-dir="down" aria-label="向下">↓</button><button data-dir="right" aria-label="向右">→</button>
           </div>
           <button id="interact" type="button">E　查看附近</button>
+        </div>
+        <div id="quest-choices" class="choice-row" hidden>
+          <button type="button" data-choice="return">交還給小安</button>
+          <button type="button" data-choice="desk">放到服務台失物招領處</button>
         </div>
       </div>
     </section>
@@ -95,7 +103,11 @@
       const message = document.querySelector('#game-message');
       const districtLabel = document.querySelector('#district-label');
       const keys = new Set();
-      const player = { x: 600, y: 222, speed: 190, facing: 1 };
+      const player = { x: 575, y: 186, speed: 190, facing: 1 };
+      let walkTarget = null;
+      const neighbor = { x: 578, y: 160, name: '小安' };
+      const sketchbook = { x: 630, y: 145, found: false, resolved: false };
+      let trust = 0;
       const places = [
         { x: 228, y: 161, name: '青葉咖啡', detail: '窗邊的座位望得到整條街。店裡傳來輕輕的音樂。' },
         { x: 624, y: 187, name: '中央公園', detail: '幾個居民在樹蔭下聊天，腳踏車沿著步道慢慢經過。' },
@@ -112,7 +124,7 @@
       ];
       const buildings = [
         [42,42,90,66,'#bdad8b'],[170,36,112,80,'#c3b99a'],[43,150,82,76,'#b3a586'],[157,169,120,68,'#cbbd9a'],
-        [365,42,86,78,'#b1a78e'],[488,38,142,87,'#c8bca0'],[361,158,112,76,'#bcb293'],[517,160,120,66,'#c6b48f'],
+        [365,42,86,78,'#b1a78e'],[361,158,112,76,'#bcb293'],
         [716,38,86,80,'#9f9d89'],[835,46,82,72,'#a7a28b'],[725,164,108,66,'#ada78e'],[856,151,70,79,'#989a87'],
         [39,323,109,76,'#b9ad91'],[184,318,102,96,'#b8b193'],[62,436,94,66,'#a9a889'],[197,441,99,65,'#c2b897'],
         [357,323,100,65,'#c7b394'],[512,316,122,88,'#b8aa8c'],[365,432,94,74,'#b8b090'],[522,438,109,62,'#c7b598']
@@ -132,6 +144,7 @@
         // Park, paths and trees.
         roundedRect(554,91,91,122,18,'#63855f');
         ctx.strokeStyle='#d0c69e';ctx.lineWidth=8;ctx.beginPath();ctx.moveTo(566,151);ctx.lineTo(633,151);ctx.moveTo(599,103);ctx.lineTo(599,201);ctx.stroke();ctx.lineWidth=1;
+        roundedRect(614,139,24,4,2,'#705a3f');roundedRect(616,143,20,3,2,'#b79b6e');
         [[571,116],[628,116],[573,190],[629,190],[600,132],[600,174]].forEach(([x,y])=>{ctx.fillStyle='#385f48';ctx.beginPath();ctx.arc(x,y,8,0,Math.PI*2);ctx.fill();ctx.fillStyle='#719365';ctx.beginPath();ctx.arc(x-2,y-3,5,0,Math.PI*2);ctx.fill();});
         // Building footprints with small shaded roofs.
         buildings.forEach(([x,y,w,h,c],i)=>{roundedRect(x+4,y+5,w,h,7,'#46574a55');roundedRect(x,y,w,h,7,c);ctx.fillStyle='#e6d8b8aa';ctx.fillRect(x+9,y+9,w-18,5);ctx.fillStyle='#7c8b7566';for(let wx=x+12;wx<x+w-8;wx+=20)for(let wy=y+24;wy<y+h-8;wy+=20)ctx.fillRect(wx,wy,7,7);if(i%3===0){ctx.fillStyle='#727a65';ctx.fillRect(x+w/2-6,y+h/2-5,12,10);}});
@@ -140,6 +153,12 @@
         [[282,263,'#d36f57'],[467,263,'#668ca4'],[663,263,'#d4a354'],[696,345,'#d67762']].forEach(([x,y,c])=>{roundedRect(x,y,22,11,4,c);ctx.fillStyle='#e7e3d0';ctx.fillRect(x+4,y+2,5,3);ctx.fillRect(x+13,y+2,5,3);});
         // Points of interest.
         places.forEach(p=>{ctx.fillStyle='#f5bd73';ctx.beginPath();ctx.arc(p.x,p.y,13,0,Math.PI*2);ctx.fill();ctx.fillStyle='#523f2d';ctx.font='bold 15px system-ui';ctx.textAlign='center';ctx.fillText('i',p.x,p.y+5);});
+        if(!sketchbook.found){roundedRect(sketchbook.x-7,sketchbook.y-5,14,10,2,'#e9a65e');ctx.strokeStyle='#fff0c9';ctx.beginPath();ctx.moveTo(sketchbook.x,sketchbook.y-4);ctx.lineTo(sketchbook.x,sketchbook.y+4);ctx.stroke();}
+        // Neighbor in the park; the speech bubble marks an available conversation.
+        ctx.fillStyle='#283b37';ctx.beginPath();ctx.ellipse(neighbor.x,neighbor.y+9,10,4,0,0,Math.PI*2);ctx.fill();
+        ctx.fillStyle='#db8f69';ctx.beginPath();ctx.arc(neighbor.x,neighbor.y,9,0,Math.PI*2);ctx.fill();
+        ctx.fillStyle='#f5e4c4';ctx.beginPath();ctx.arc(neighbor.x,neighbor.y-2,4,0,Math.PI*2);ctx.fill();
+        if(!sketchbook.resolved){roundedRect(neighbor.x+6,neighbor.y-22,19,15,5,'#f7ecd0');ctx.fillStyle='#617565';ctx.font='bold 11px system-ui';ctx.textAlign='center';ctx.fillText('…',neighbor.x+15.5,neighbor.y-11);}
         // Player shadow, body and facing direction.
         ctx.fillStyle='#172a25aa';ctx.beginPath();ctx.ellipse(player.x,player.y+10,11,5,0,0,Math.PI*2);ctx.fill();
         ctx.fillStyle='#23483c';ctx.beginPath();ctx.arc(player.x,player.y,10,0,Math.PI*2);ctx.fill();
@@ -147,7 +166,15 @@
         ctx.fillStyle='#eff7f1';ctx.beginPath();ctx.arc(player.x+player.facing*5,player.y-4,1.4,0,Math.PI*2);ctx.fill();
       }
       function nearestPlace(){return places.map(p=>({...p,d:Math.hypot(p.x-player.x,p.y-player.y)})).sort((a,b)=>a.d-b.d)[0];}
-      function interact(){const p=nearestPlace();if(p.d<46){message.textContent=`${p.name}：${p.detail}`;}else{message.textContent='附近沒有特別的地點。沿著街道走走看看吧。';}}
+      function interact(){
+        const npcDistance=Math.hypot(neighbor.x-player.x,neighbor.y-player.y);
+        const bookDistance=Math.hypot(sketchbook.x-player.x,sketchbook.y-player.y);
+        const choices=document.querySelector('#quest-choices');
+        if(!sketchbook.found&&!sketchbook.resolved&&npcDistance<46){message.textContent=`${neighbor.name}：我把素描本落在公園長椅附近，可以幫我找找嗎？`;return;}
+        if(!sketchbook.found&&!sketchbook.resolved&&bookDistance<28){sketchbook.found=true;message.textContent='你在長椅旁找到一本素描本。回去找小安，或交給公園服務台。';return;}
+        if(sketchbook.found&&!sketchbook.resolved&&npcDistance<46){message.textContent='你找到小安的素描本了。想怎麼處理？';choices.hidden=false;return;}
+        const p=nearestPlace();if(p.d<46){message.textContent=`${p.name}：${p.detail}`;}else if(npcDistance<46){message.textContent=sketchbook.resolved?'小安向你揮揮手，繼續在公園散步。':'小安正在找她的素描本。';}else{message.textContent='附近沒有特別的地點。沿著街道走走看看吧。';}
+      }
       function updateDistrict(){const z=zones.find(z=>player.x>=z.x&&player.x<z.x+z.w&&player.y>=z.y&&player.y<z.y+z.h);districtLabel.textContent=z?.label||'街道';}
       function canMove(x,y){
         const radius=9;
@@ -158,10 +185,16 @@
       window.addEventListener('keydown',e=>{const k=e.key.toLowerCase();if(['arrowup','arrowdown','arrowleft','arrowright',' '].includes(k))e.preventDefault();if(k==='e'){interact();return;}keys.add(k);},{passive:false});
       window.addEventListener('keyup',e=>keys.delete(e.key.toLowerCase()));
       window.addEventListener('blur',()=>keys.clear());
+      canvas.addEventListener('pointerdown',e=>{const r=canvas.getBoundingClientRect();walkTarget={x:(e.clientX-r.left)*canvas.width/r.width,y:(e.clientY-r.top)*canvas.height/r.height};canvas.focus();});
       document.querySelector('#interact').addEventListener('click',interact);
+      document.querySelectorAll('[data-choice]').forEach(button=>button.addEventListener('click',()=>{
+        const choices=document.querySelector('#quest-choices');choices.hidden=true;sketchbook.resolved=true;
+        if(button.dataset.choice==='return'){trust+=1;message.textContent=`小安接過素描本，謝謝你幫忙。鄰居信任 +1（${trust}）。`;}
+        else{message.textContent='你把素描本放進公園服務台的失物招領箱。小安晚點就能去領取。';}
+      }));
       document.querySelectorAll('[data-dir]').forEach(button=>{const dir=button.dataset.dir;const key={up:'arrowup',down:'arrowdown',left:'arrowleft',right:'arrowright'}[dir];button.addEventListener('pointerdown',e=>{e.preventDefault();keys.add(key);});['pointerup','pointercancel','pointerleave'].forEach(name=>button.addEventListener(name,()=>keys.delete(key)));});
       let last=performance.now();
-      function frame(now){const dt=Math.min((now-last)/1000,.04);last=now;let dx=0,dy=0;if(keys.has('arrowleft')||keys.has('a'))dx--;if(keys.has('arrowright')||keys.has('d'))dx++;if(keys.has('arrowup')||keys.has('w'))dy--;if(keys.has('arrowdown')||keys.has('s'))dy++;if(dx||dy){const len=Math.hypot(dx,dy);const nx=player.x+dx/len*player.speed*dt;const ny=player.y+dy/len*player.speed*dt;if(canMove(nx,player.y))player.x=nx;if(canMove(player.x,ny))player.y=ny;if(dx)player.facing=Math.sign(dx);updateDistrict();}draw();requestAnimationFrame(frame);}
+      function frame(now){const dt=Math.min((now-last)/1000,.04);last=now;let dx=0,dy=0;if(keys.has('arrowleft')||keys.has('a'))dx--;if(keys.has('arrowright')||keys.has('d'))dx++;if(keys.has('arrowup')||keys.has('w'))dy--;if(keys.has('arrowdown')||keys.has('s'))dy++;if(!dx&&!dy&&walkTarget){dx=walkTarget.x-player.x;dy=walkTarget.y-player.y;if(Math.hypot(dx,dy)<8){walkTarget=null;dx=dy=0;}}if(dx||dy){const len=Math.hypot(dx,dy);const nx=player.x+dx/len*player.speed*dt;const ny=player.y+dy/len*player.speed*dt;if(canMove(nx,player.y))player.x=nx;if(canMove(player.x,ny))player.y=ny;if(dx)player.facing=Math.sign(dx);if(walkTarget&&Math.hypot(walkTarget.x-player.x,walkTarget.y-player.y)<8)walkTarget=null;updateDistrict();}draw();requestAnimationFrame(frame);}
       updateDistrict();requestAnimationFrame(frame);
     })();
   </script>
