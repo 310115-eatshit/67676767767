@@ -95,7 +95,7 @@
       const message = document.querySelector('#game-message');
       const districtLabel = document.querySelector('#district-label');
       const keys = new Set();
-      const player = { x: 454, y: 278, speed: 190, facing: 1 };
+      const player = { x: 600, y: 222, speed: 190, facing: 1 };
       const places = [
         { x: 228, y: 161, name: '青葉咖啡', detail: '窗邊的座位望得到整條街。店裡傳來輕輕的音樂。' },
         { x: 624, y: 187, name: '中央公園', detail: '幾個居民在樹蔭下聊天，腳踏車沿著步道慢慢經過。' },
@@ -149,13 +149,19 @@
       function nearestPlace(){return places.map(p=>({...p,d:Math.hypot(p.x-player.x,p.y-player.y)})).sort((a,b)=>a.d-b.d)[0];}
       function interact(){const p=nearestPlace();if(p.d<46){message.textContent=`${p.name}：${p.detail}`;}else{message.textContent='附近沒有特別的地點。沿著街道走走看看吧。';}}
       function updateDistrict(){const z=zones.find(z=>player.x>=z.x&&player.x<z.x+z.w&&player.y>=z.y&&player.y<z.y+z.h);districtLabel.textContent=z?.label||'街道';}
+      function canMove(x,y){
+        const radius=9;
+        if(x<radius+3||x>960-radius-3||y<radius+3||y>540-radius-3)return false;
+        if(x>727&&y>288)return false;
+        return !buildings.some(([bx,by,bw,bh])=>{const cx=Math.max(bx,Math.min(x,bx+bw));const cy=Math.max(by,Math.min(y,by+bh));return Math.hypot(x-cx,y-cy)<radius;});
+      }
       window.addEventListener('keydown',e=>{const k=e.key.toLowerCase();if(['arrowup','arrowdown','arrowleft','arrowright',' '].includes(k))e.preventDefault();if(k==='e'){interact();return;}keys.add(k);},{passive:false});
       window.addEventListener('keyup',e=>keys.delete(e.key.toLowerCase()));
       window.addEventListener('blur',()=>keys.clear());
       document.querySelector('#interact').addEventListener('click',interact);
       document.querySelectorAll('[data-dir]').forEach(button=>{const dir=button.dataset.dir;const key={up:'arrowup',down:'arrowdown',left:'arrowleft',right:'arrowright'}[dir];button.addEventListener('pointerdown',e=>{e.preventDefault();keys.add(key);});['pointerup','pointercancel','pointerleave'].forEach(name=>button.addEventListener(name,()=>keys.delete(key)));});
       let last=performance.now();
-      function frame(now){const dt=Math.min((now-last)/1000,.04);last=now;let dx=0,dy=0;if(keys.has('arrowleft')||keys.has('a'))dx--;if(keys.has('arrowright')||keys.has('d'))dx++;if(keys.has('arrowup')||keys.has('w'))dy--;if(keys.has('arrowdown')||keys.has('s'))dy++;if(dx||dy){const len=Math.hypot(dx,dy);player.x=Math.max(13,Math.min(947,player.x+dx/len*player.speed*dt));player.y=Math.max(13,Math.min(527,player.y+dy/len*player.speed*dt));if(dx)player.facing=Math.sign(dx);updateDistrict();}draw();requestAnimationFrame(frame);}
+      function frame(now){const dt=Math.min((now-last)/1000,.04);last=now;let dx=0,dy=0;if(keys.has('arrowleft')||keys.has('a'))dx--;if(keys.has('arrowright')||keys.has('d'))dx++;if(keys.has('arrowup')||keys.has('w'))dy--;if(keys.has('arrowdown')||keys.has('s'))dy++;if(dx||dy){const len=Math.hypot(dx,dy);const nx=player.x+dx/len*player.speed*dt;const ny=player.y+dy/len*player.speed*dt;if(canMove(nx,player.y))player.x=nx;if(canMove(player.x,ny))player.y=ny;if(dx)player.facing=Math.sign(dx);updateDistrict();}draw();requestAnimationFrame(frame);}
       updateDistrict();requestAnimationFrame(frame);
     })();
   </script>
