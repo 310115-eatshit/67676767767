@@ -116,6 +116,17 @@
         { x: 780, y: 136, name: '港區舊車站', detail: '老月台旁還留著褪色的時刻表，遠方傳來港口汽笛聲。' }
       ];
       const photoCount=document.querySelector('#photo-count');
+      const saveKey='free-city-prototype-v1';
+      let savedProgress={};
+      try{savedProgress=JSON.parse(localStorage.getItem(saveKey)||'{}')||{};}catch{savedProgress={};}
+      places.forEach(place=>{place.photographed=Array.isArray(savedProgress.photos)&&savedProgress.photos.includes(place.name);});
+      sketchbook.found=savedProgress.sketchbookFound===true;
+      sketchbook.resolved=savedProgress.sketchbookResolved===true;
+      trust=Number.isFinite(savedProgress.trust)?savedProgress.trust:0;
+      photoCount.textContent=`${places.filter(place=>place.photographed).length}/${places.length}`;
+      function saveProgress(){
+        try{localStorage.setItem(saveKey,JSON.stringify({photos:places.filter(place=>place.photographed).map(place=>place.name),sketchbookFound:sketchbook.found,sketchbookResolved:sketchbook.resolved,trust}));}catch{}
+      }
       const zones = [
         { x: 0, y: 0, w: 320, h: 270, label: '住宅區', fill: '#849a75' },
         { x: 320, y: 0, w: 360, h: 270, label: '市中心', fill: '#82916f' },
@@ -173,10 +184,10 @@
         const bookDistance=Math.hypot(sketchbook.x-player.x,sketchbook.y-player.y);
         const choices=document.querySelector('#quest-choices');
         if(!sketchbook.found&&!sketchbook.resolved&&npcDistance<46){message.textContent=`${neighbor.name}：我把素描本落在公園長椅附近，可以幫我找找嗎？`;return;}
-        if(!sketchbook.found&&!sketchbook.resolved&&bookDistance<28){sketchbook.found=true;message.textContent='你在長椅旁找到一本素描本。回去找小安，或交給公園服務台。';return;}
+        if(!sketchbook.found&&!sketchbook.resolved&&bookDistance<28){sketchbook.found=true;saveProgress();message.textContent='你在長椅旁找到一本素描本。回去找小安，或交給公園服務台。';return;}
         if(sketchbook.found&&!sketchbook.resolved&&npcDistance<46){message.textContent='你找到小安的素描本了。想怎麼處理？';choices.hidden=false;return;}
         if(sketchbook.resolved&&npcDistance<46){message.textContent=trust>0?'小安：謝謝你親自把素描本還回來。傍晚的河岸很漂亮，有空可以去散步。':'小安：我從服務台領回素描本了，謝謝你幫忙找它。';return;}
-        const nearest=nearestPlace();const p=nearest.place;if(nearest.d<46){if(!p.photographed){p.photographed=true;const count=places.filter(place=>place.photographed).length;photoCount.textContent=`${count}/${places.length}`;message.textContent=`${p.name}：${p.detail} 你拍下照片（${count}/${places.length}）。`;}else{message.textContent=`${p.name}：${p.detail} 你已經拍過這裡。`;}}else if(npcDistance<46){message.textContent='小安正在找她的素描本。';}else{message.textContent='附近沒有特別的地點。沿著街道走走看看吧。';}
+        const nearest=nearestPlace();const p=nearest.place;if(nearest.d<46){if(!p.photographed){p.photographed=true;saveProgress();const count=places.filter(place=>place.photographed).length;photoCount.textContent=`${count}/${places.length}`;message.textContent=`${p.name}：${p.detail} 你拍下照片（${count}/${places.length}）。`;}else{message.textContent=`${p.name}：${p.detail} 你已經拍過這裡。`;}}else if(npcDistance<46){message.textContent='小安正在找她的素描本。';}else{message.textContent='附近沒有特別的地點。沿著街道走走看看吧。';}
       }
       function updateDistrict(){const z=zones.find(z=>player.x>=z.x&&player.x<z.x+z.w&&player.y>=z.y&&player.y<z.y+z.h);districtLabel.textContent=z?.label||'街道';}
       function canMove(x,y){
@@ -194,6 +205,7 @@
         const choices=document.querySelector('#quest-choices');choices.hidden=true;sketchbook.resolved=true;
         if(button.dataset.choice==='return'){trust+=1;message.textContent=`小安接過素描本，謝謝你幫忙。鄰居信任 +1（${trust}）。`;}
         else{message.textContent='你把素描本放進公園服務台的失物招領箱。小安晚點就能去領取。';}
+        saveProgress();
       }));
       document.querySelectorAll('[data-dir]').forEach(button=>{const dir=button.dataset.dir;const key={up:'arrowup',down:'arrowdown',left:'arrowleft',right:'arrowright'}[dir];button.addEventListener('pointerdown',e=>{e.preventDefault();keys.add(key);});['pointerup','pointercancel','pointerleave'].forEach(name=>button.addEventListener(name,()=>keys.delete(key)));});
       let last=performance.now();
